@@ -38,6 +38,7 @@
     "usehooks-ts@^2.7.2": "patch:usehooks-ts@npm:^2.7.2#./.yarn/patches/usehooks-ts-npm-2.7.2-fceffe0e43.patch"
   },
   "devDependencies": {
+    "@types/react-beautiful-dnd": "^13",
     "husky": "~8.0.3",
     "lint-staged": "~13.2.2",
     "next": "~14.0.4",
@@ -46,7 +47,10 @@
   "packageManager": "yarn@3.2.3",
   "dependencies": {
     "@chainlink/contracts": "^1.0.0",
+    "@dnd-kit/core": "^6.1.0",
+    "react-beautiful-dnd": "^13.1.1",
     "react-dnd": "^16.0.1",
-    "react-dnd-html5-backend": "^16.0.1"
+    "react-dnd-html5-backend": "^16.0.1",
+    "react-loading-skeleton": "^3.4.0"
   }
 }

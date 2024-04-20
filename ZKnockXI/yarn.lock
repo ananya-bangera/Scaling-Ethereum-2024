@@ -2836,10 +2836,7 @@ __metadata:
     eslint-config-prettier: ~8.5.0
     eslint-plugin-prettier: ~4.2.1
     ethers: ^6.12.0
-<<<<<<< HEAD
     fetch-api: ^0.0.2
-=======
->>>>>>> 0fc04d8b496f490c3f247e594bf98110441dcd05
     next: ~14.0.4
     next-themes: ~0.2.1
     nprogress: ~0.2.0
@@ -5572,9 +5569,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-<<<<<<< HEAD
-"axios@npm:^1.5.1, axios@npm:^1.6.5, axios@npm:^1.6.8":
-=======
 "axios@npm:^0.24.0":
   version: 0.24.0
   resolution: "axios@npm:0.24.0"
@@ -5584,8 +5578,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"axios@npm:^1.5.1":
->>>>>>> 0fc04d8b496f490c3f247e594bf98110441dcd05
+"axios@npm:^1.5.1, axios@npm:^1.6.5, axios@npm:^1.6.8":
   version: 1.6.8
   resolution: "axios@npm:1.6.8"
   dependencies:
@@ -7269,19 +7262,19 @@ __metadata:
   languageName: node
   linkType: hard
 
-<<<<<<< HEAD
-"dotenv@npm:^16.4.5":
-  version: 16.4.5
-  resolution: "dotenv@npm:16.4.5"
-  checksum: 301a12c3d44fd49888b74eb9ccf9f07a1f5df43f489e7fcb89647a2edcd84c42d6bc349dc8df099cd18f07c35c7b04685c1a4f3e6a6a9e6b30f8d48c15b7f49c
-=======
 "dot-prop@npm:^6.0.1":
   version: 6.0.1
   resolution: "dot-prop@npm:6.0.1"
   dependencies:
     is-obj: ^2.0.0
   checksum: 0f47600a4b93e1dc37261da4e6909652c008832a5d3684b5bf9a9a0d3f4c67ea949a86dceed9b72f5733ed8e8e6383cc5958df3bbd0799ee317fd181f2ece700
->>>>>>> 0fc04d8b496f490c3f247e594bf98110441dcd05
+  languageName: node
+  linkType: hard
+
+"dotenv@npm:^16.4.5":
+  version: 16.4.5
+  resolution: "dotenv@npm:16.4.5"
+  checksum: 301a12c3d44fd49888b74eb9ccf9f07a1f5df43f489e7fcb89647a2edcd84c42d6bc349dc8df099cd18f07c35c7b04685c1a4f3e6a6a9e6b30f8d48c15b7f49c
   languageName: node
   linkType: hard
 
@@ -8573,11 +8566,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-<<<<<<< HEAD
-"ethers@npm:^6.10.0, ethers@npm:^6.12.0":
-=======
-"ethers@npm:^6.12.0, ethers@npm:^6.7.1":
->>>>>>> 0fc04d8b496f490c3f247e594bf98110441dcd05
+"ethers@npm:^6.10.0, ethers@npm:^6.12.0, ethers@npm:^6.7.1":
   version: 6.12.0
   resolution: "ethers@npm:6.12.0"
   dependencies:
@@ -14476,12 +14465,9 @@ __metadata:
     "@dnd-kit/core": ^6.1.0
     "@lighthouse-web3/sdk": ^0.3.2
     "@types/react-beautiful-dnd": ^13
-<<<<<<< HEAD
     alchemy-sdk: ^3.2.1
     dotenv: ^16.4.5
-=======
     ethers: ^6.12.0
->>>>>>> 0fc04d8b496f490c3f247e594bf98110441dcd05
     husky: ~8.0.3
     lint-staged: ~13.2.2
     next: ~14.0.4
@@ -15903,11 +15889,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-<<<<<<< HEAD
-"tslib@npm:^2.0.0, tslib@npm:^2.1.0, tslib@npm:^2.3.1, tslib@npm:^2.4.0, tslib@npm:^2.6.2":
-=======
 "tslib@npm:^2.0.0, tslib@npm:^2.1.0, tslib@npm:^2.3.1, tslib@npm:^2.4.0, tslib@npm:^2.6.1, tslib@npm:^2.6.2":
->>>>>>> 0fc04d8b496f490c3f247e594bf98110441dcd05
   version: 2.6.2
   resolution: "tslib@npm:2.6.2"
   checksum: 329ea56123005922f39642318e3d1f0f8265d1e7fcb92c633e0809521da75eeaca28d2cf96d7248229deb40e5c19adf408259f4b9640afd20d13aecc1430f3ad

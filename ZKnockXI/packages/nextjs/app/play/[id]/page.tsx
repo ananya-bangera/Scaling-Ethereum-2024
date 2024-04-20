@@ -4,17 +4,13 @@ import { useEffect, useState } from "react";
 import Image from "next/image";
 import BETTING_CONTRACT from "../../../../hardhat/deployments/arbitrumSepolia/Betting.json";
 import { DndContext } from "./DndContext";
-<<<<<<< HEAD
 import { EvmChains, SignProtocolClient, SpMode } from "@ethsign/sp-sdk";
-import { Alchemy, Network, Utils } from "alchemy-sdk";
-import * as dotenv from "dotenv";
+
 import { BigNumber, ethers } from "ethers";
-=======
 import lighthouse from "@lighthouse-web3/sdk";
-import { ethers } from "ethers";
+
 import { Alchemy, Network, Utils } from "alchemy-sdk";
 import * as dotenv from "dotenv";
->>>>>>> 0fc04d8b496f490c3f247e594bf98110441dcd05
 import { read } from "fs";
 import { Draggable, DropResult, Droppable } from "react-beautiful-dnd";
 import { parseEther } from "viem";

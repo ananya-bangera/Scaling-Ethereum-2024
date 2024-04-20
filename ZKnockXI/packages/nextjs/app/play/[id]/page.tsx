@@ -4,9 +4,10 @@ import { useEffect, useState } from "react";
 import Image from "next/image";
 import BETTING_CONTRACT from "../../../../hardhat/deployments/arbitrumSepolia/Betting.json";
 import { DndContext } from "./DndContext";
+import { EvmChains, SignProtocolClient, SpMode } from "@ethsign/sp-sdk";
 import { Alchemy, Network, Utils } from "alchemy-sdk";
 import * as dotenv from "dotenv";
-import { ethers } from "ethers";
+import { BigNumber, ethers } from "ethers";
 import { read } from "fs";
 import { Draggable, DropResult, Droppable } from "react-beautiful-dnd";
 import { parseEther } from "viem";
@@ -14,10 +15,17 @@ import { encodeAbiParameters, encodePacked, hexToBytes, keccak256, parseAbiParam
 import { useAccount } from "wagmi";
 import { useWatchContractEvent } from "wagmi";
 import { ArrowRightIcon } from "@heroicons/react/24/outline";
+import {
+  ArrowRightCircleIcon,
+  BanknotesIcon,
+  CalculatorIcon,
+  LockClosedIcon,
+  TrophyIcon,
+} from "@heroicons/react/24/outline";
 import { EtherInput } from "~~/components/scaffold-eth";
 import match_players from "~~/data/match_players.json";
 import matches from "~~/data/matches.json";
-import { useScaffoldReadContract, useScaffoldWriteContract } from "~~/hooks/scaffold-eth";
+import { useScaffoldWriteContract } from "~~/hooks/scaffold-eth";
 
 dotenv.config();
 
@@ -34,13 +42,27 @@ interface MatchPlayers {
 
 const Home = ({ params }: { params: { id: string } }) => {
   const [step, setStep] = useState(2);
+  const [players, setPlayers] = useState([]);
   const [data, setData] = useState<MatchPlayers[] | []>([]);
   const [ethAmount, setEthAmount] = useState("0");
+  const [logLevel, setLogLevel] = useState(1);
   const { writeContractAsync, isPending } = useScaffoldWriteContract("Betting");
   // console.log(BETTING_CONTRACT);
+  const axios = require("axios").default;
+  const [isWinner, setIsWinner] = useState(false);
   const { address: connectedAddress } = useAccount();
-
-  
+  const [logsAll, setLogsAll] = useState([
+    "The Match Has Ended 🔚",
+    "Calculating The Hash Squad 🔎",
+    // "Signing The Proof With Aadhar Proof 💳",
+    "Generating The ZK Proof 🧾",
+    "Verifying Your Squad... 🕵️‍♂️",
+    "Squad Verified, No Tampering Detected ✅",
+    "Calculating Total Score 💯",
+    // "Your Total Score is 200 🚀",
+    // "You've Won, Please Claim Your Rewards 💸",
+    // "You've Unfortunately Lost, Better Luck Next Time 😥",
+  ]);
 
   function computeMerkleRoot(points) {
     const hashedValues = points.map(point => keccak256(`0x${point.toString(16)}`));
@@ -73,6 +95,23 @@ const Home = ({ params }: { params: { id: string } }) => {
     return array.concat(Array.from({ length: paddedLength - array.length }, () => 0));
   }
 
+  const handleClaimReward = async squadHash => {
+    try {
+      await writeContractAsync(
+        {
+          functionName: "claimRewards",
+          args: [params.id, squadHash],
+        },
+        {
+          onBlockConfirmation: txnReceipt => {
+            console.log("📦 Transaction blockHash", txnReceipt.blockHash);
+          },
+        },
+      );
+    } catch (e) {
+      console.error("Error setting greeting", e);
+    }
+  };
   const handleSendRequest = async () => {
     try {
       await writeContractAsync(
@@ -100,6 +139,7 @@ const Home = ({ params }: { params: { id: string } }) => {
       console.error("Error setting greeting", e);
     }
   };
+
   const handleSubmitSquad = async () => {
     try {
       const merkleRoot = computeMerkleRoot(
@@ -114,6 +154,35 @@ const Home = ({ params }: { params: { id: string } }) => {
       const finalHash = keccak256(
         encodePacked(["bytes20", "bytes32", "bytes32"], [connectedAddress, merkleRoot, timeconst]),
       );
+
+      //API
+
+      await axios
+        .post(
+          "https://api.witness.co/postLeafHash",
+          {
+            leafHash: finalHash,
+          },
+
+          { headers: { Authorization: "Bearer zknockx_17_apr_2024_6L559IN6SpRTCKhw9I9USP1L9ov0GyeNbAJO" } },
+        )
+        .then(async function (response) {
+          // handle success
+          console.log("success");
+          console.log(response.data.leafIndex);
+          await createNotaryAttestation(response.data.leafIndex.toString());
+        })
+        .catch(function (error) {
+          // handle error
+          console.log(error);
+        });
+      const provider = new ethers.JsonRpcProvider(
+        "https://arb-sepolia.g.alchemy.com/v2/kP1dnGyS5Y5e0lbD2jNkd_qjXGUodbZ3",
+      );
+      const contract = new ethers.Contract(BETTING_CONTRACT.address, BETTING_CONTRACT.abi, provider);
+      let score = await contract.score();
+
+      console.log(score);
 
       await writeContractAsync(
         {
@@ -131,20 +200,98 @@ const Home = ({ params }: { params: { id: string } }) => {
       console.error("Error setting greeting", e);
     }
   };
+
+  const createNotaryAttestation = async leafIndex => {
+    const client = new SignProtocolClient(SpMode.OnChain, {
+      chain: EvmChains.arbitrumSepolia,
+    });
+    const res = await client.createAttestation({
+      schemaId: "0x30",
+      data: {
+        leafIndex,
+      },
+      indexingValue: connectedAddress.toLowerCase() + params.id + leafIndex.toString(),
+    });
+    console.log(res);
+  };
+
   const submitSquad = async () => {
     await handleSubmitSquad();
     console.log("squad submitted 2");
+    setPlayers(data[1]);
     setStep(4);
   };
 
-  const { data: s_lastRequestId } = useScaffoldReadContract({
-    contractName: "Betting",
-    functionName: "s_lastRequestId",
-  });
-  const { data: score } = useScaffoldReadContract({
-    contractName: "Betting",
-    functionName: "score",
-  });
+  const claimReward = async () => {
+    const merkleRoot = computeMerkleRoot(
+      padArrayWithZeros(
+        data[1].components.map(player => {
+          return player.player_id;
+        }),
+      ),
+    );
+    // console.log(merkleRoot);
+    // console.log(address);
+    const timeconst = localStorage.getItem("timestamp_" + params.id);
+    const finalHash = keccak256(
+      encodePacked(["bytes20", "bytes32", "bytes32"], [connectedAddress, merkleRoot, timeconst]),
+    );
+    // console.log(timeconst);
+    // console.log(finalHash);
+
+    await handleClaimReward(finalHash);
+    setIsWinner(false);
+  };
+
+  async function makeAttestationRequest(endpoint: string, options: any) {
+    const url = `https://testnet-rpc.sign.global/api/${endpoint}`;
+    const res = await axios.request({
+      url,
+      headers: {
+        "Content-Type": "application/json; charset=UTF-8",
+      },
+      ...options,
+    });
+    console.log(res.data);
+    // throw API errors
+    if (res.status !== 200) {
+      throw new Error(JSON.stringify(res));
+    }
+    // return original response
+    return res.data;
+  }
+  const queryAttestations = async(leafIndex) => {
+    const response = await makeAttestationRequest(
+      "index/attestations",
+      {
+        method: "GET",
+        params: {
+          mode: "onchain", // Data storage location
+          schemaId: "onchain_evm_421614_0x30", // Your full schema's ID
+          attester: connectedAddress, // Alice's address
+          indexingValue: connectedAddress.toLowerCase() + params.id + leafIndex.toString(), // Bob's address
+        },
+      },
+      // console.log("attestation response")
+      // console.log(response)
+    );
+
+    // Make sure the request was successfully processed.
+    if (!response.success) {
+      return { success: false, message: response?.message ?? "Attestation query failed." };
+    }
+
+    // Return a message if no attestations are found.
+    if (response.data?.total === 0) {
+      return { success: false, message: "No attestation for this address found." };
+    }
+
+    // Return all attestations that match our query.
+    return {
+      success: true,
+      attestations: response.data.rows,
+    };
+  }
 
   const betTeam = async () => {
     await handleSendRequest();
@@ -156,9 +303,72 @@ const Home = ({ params }: { params: { id: string } }) => {
     contract.on("RequestFulfilled", () => {
       submitSquad();
     });
-    // await test();
   };
+  const verifyAndCalculatePoints = async () => {
+    setLogLevel(2);
+    const merkleRoot = computeMerkleRoot(
+      padArrayWithZeros(
+        players.components.map(player => {
+          return player.player_id;
+        }),
+      ),
+    );
+    setLogLevel(3);
+    const timestamp = localStorage.getItem("timestamp_" + params.id);
+    const finalHash = keccak256(
+      encodePacked(["bytes20", "bytes32", "bytes32"], [connectedAddress, merkleRoot, timestamp]),
+    );
+    //verify witness
+    let attestations;
 
+    await axios
+      .get("https://api.witness.co/getLeafIndexByHash", {
+        params: {
+          leafHash: finalHash,
+        },
+      })
+      .then(async function (response) {
+        console.log(response.data.leafIndex);
+        attestations = await queryAttestations(response.data.leafIndex);
+      })
+      .catch(function (error) {
+        console.log(error);
+      });
+    console.log("attestations ananya");
+    console.log(attestations.attestations.length == 1);
+
+    setLogLevel(5);
+    const data = await axios(
+      `https://puce-smoggy-clam.cyclic.app/scores/${params.id}/${players.components
+        .map(player => {
+          return player.player_id.toString();
+        })
+        .join("P")}`,
+    );
+    console.log(data.data);
+    // const res = await data.json();
+    // console.log(res);
+    setLogsAll([...logsAll, `Your Total Score Is ${data.data.total_score}`]);
+    setLogLevel(9);
+    const provider = new ethers.JsonRpcProvider(
+      "https://arb-sepolia.g.alchemy.com/v2/kP1dnGyS5Y5e0lbD2jNkd_qjXGUodbZ3",
+    );
+    const contract = new ethers.Contract(BETTING_CONTRACT.address, BETTING_CONTRACT.abi, provider);
+    let winnerData = await contract.matchWinnerData(params.id);
+    console.log("winnerdata");
+    console.log(winnerData);
+
+    console.log(winnerData[1]);
+    console.log(connectedAddress);
+    if (winnerData[1].toString() === connectedAddress?.toString()) {
+      setLogsAll([...logsAll, "You've Won, Please Claim Your Rewards 💸"]);
+      setLogLevel(10);
+      setIsWinner(true);
+    } else {
+      setLogsAll([...logsAll, "You've Unfortunately Lost, Better Luck Next Time 😥"]);
+      setLogLevel(10);
+    }
+  };
 
   const onDragEnd = (result: DropResult) => {
     const { source, destination } = result;
@@ -182,11 +392,6 @@ const Home = ({ params }: { params: { id: string } }) => {
   };
   useEffect(() => {
     const temp = match_players[parseInt(params.id) - 1];
-    // setData([
-    //   { id: 0, title: "Batsmen", components: temp.batsmen },
-    //   // { id: 1, title: "All Players", components: [{player}] },
-    //   { id: 2, title: "Bowlers", components: temp.bowlers },
-    // ]);
 
     const tempData: MatchPlayers[] = [
       { id: 0, title: "Batsmen", components: temp.batsmen },
@@ -484,6 +689,59 @@ const Home = ({ params }: { params: { id: string } }) => {
             {/* );
         })} */}
           </div>
+        </div>
+      )}
+
+      {step == 4 && (
+        <div className="container max-w-[100%] lg:max-w-7xl m-auto py-16 lg:py-20 xl:pl-24 lg:pl-16 flex flex-col-reverse lg:flex-row items-center gap-5 lg:gap-0 mb-10">
+          <div className="space-y-6 lg:max-w-[55%] flex flex-col items-center lg:items-start">
+            <div className="text-center px-1 max-w-lg lg:max-w-none lg:w-11/12 lg:px-0 lg:text-left">
+              <h1 className="m-0 mb-3 text-3xl">View Your Results</h1>
+              <p className="m-0 mb-3">
+                We verify that you have not modified the team you are now revealing for calculating the points. We do
+                this using <span className="font-bold">the squad hash</span> you previously submitted using{" "}
+                <span className="font-bold">Zero Knowledge Proof</span>.
+              </p>
+              <p className="m-0 mb-3">
+                The points are calculated via a <span className="font-bold">Decentralized Oracle Network</span> to
+                ensure <span className="font-bold">transparency</span> in the scoring process.
+              </p>
+              <div className="m-0 mb-3 mt-10">
+                <div className="m-0 mb-3 mt-10 flex items-center justify-evenly w-full">
+                  <div className="text-center lg:text-left">
+                    <button
+                      className="btn btn-accent"
+                      onClick={() => {
+                        verifyAndCalculatePoints();
+                      }}
+                    >
+                      Verify Squad & Calculate Points
+                      <CalculatorIcon className="h-4 w-4" />
+                    </button>
+                  </div>
+                  <div className="text-center lg:text-left">
+                    <button className="btn btn-accent" disabled={!isWinner} onClick={() => claimReward()}>
+                      Claim Rewards
+                      <TrophyIcon className="h-4 w-4" />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div className="text-center px-1 max-w-lg lg:max-w-none lg:w-11/12 lg:px-0 lg:text-left">
+              <div className="mockup-browser bg-accent">
+                <div className="mockup-browser-toolbar">
+                  <div className="input">Logs</div>
+                </div>
+                <div className="px-4 py-4 bg-neutral text-secondary h-52 overflow-y-scroll">
+                  {logsAll.slice(0, logLevel).map((logStatement, i) => (
+                    <div>{`[${i + 1}] ${logStatement}`}</div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+          <div>{/*  */}</div>
         </div>
       )}
     </DndContext>

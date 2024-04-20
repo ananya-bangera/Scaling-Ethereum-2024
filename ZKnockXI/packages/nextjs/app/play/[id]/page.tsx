@@ -2,11 +2,24 @@
 
 import { useEffect, useState } from "react";
 import Image from "next/image";
+import BETTING_CONTRACT from "../../../../hardhat/deployments/arbitrumSepolia/Betting.json";
 import { DndContext } from "./DndContext";
+import { Alchemy, Network, Utils } from "alchemy-sdk";
+import * as dotenv from "dotenv";
+import { ethers } from "ethers";
+import { read } from "fs";
 import { Draggable, DropResult, Droppable } from "react-beautiful-dnd";
+import { parseEther } from "viem";
+import { encodeAbiParameters, encodePacked, hexToBytes, keccak256, parseAbiParameters } from "viem";
+import { useAccount } from "wagmi";
+import { useWatchContractEvent } from "wagmi";
 import { ArrowRightIcon } from "@heroicons/react/24/outline";
+import { EtherInput } from "~~/components/scaffold-eth";
 import match_players from "~~/data/match_players.json";
 import matches from "~~/data/matches.json";
+import { useScaffoldReadContract, useScaffoldWriteContract } from "~~/hooks/scaffold-eth";
+
+dotenv.config();
 
 interface MatchPlayers {
   id: number;
@@ -22,6 +35,131 @@ interface MatchPlayers {
 const Home = ({ params }: { params: { id: string } }) => {
   const [step, setStep] = useState(2);
   const [data, setData] = useState<MatchPlayers[] | []>([]);
+  const [ethAmount, setEthAmount] = useState("0");
+  const { writeContractAsync, isPending } = useScaffoldWriteContract("Betting");
+  // console.log(BETTING_CONTRACT);
+  const { address: connectedAddress } = useAccount();
+
+  
+
+  function computeMerkleRoot(points) {
+    const hashedValues = points.map(point => keccak256(`0x${point.toString(16)}`));
+    // console.log(hashedValues);
+
+    function recursiveMerkleRoot(hashes) {
+      if (hashes.length === 1) {
+        return hashes[0];
+      }
+
+      const nextLevelHashes = [];
+
+      // Combine adjacent hashes and hash them together
+      for (let i = 0; i < hashes.length; i += 2) {
+        const left = hashes[i];
+        const right = i + 1 < hashes.length ? hashes[i + 1] : "0x";
+        const combinedHash = keccak256(encodePacked(["bytes32", "bytes32"], [left, right]));
+        nextLevelHashes.push(combinedHash);
+      }
+
+      // Recur for the next level
+      return recursiveMerkleRoot(nextLevelHashes);
+    }
+
+    // Start the recursive computation
+    return recursiveMerkleRoot(hashedValues);
+  }
+  function padArrayWithZeros(array) {
+    const paddedLength = Math.pow(2, Math.ceil(Math.log2(array.length)));
+    return array.concat(Array.from({ length: paddedLength - array.length }, () => 0));
+  }
+
+  const handleSendRequest = async () => {
+    try {
+      await writeContractAsync(
+        {
+          functionName: "sendRequest",
+          args: [
+            BigInt(55),
+            [
+              params.id,
+              data[1].components
+                .map(player => {
+                  return player.player_id.toString();
+                })
+                .join("P"),
+            ],
+          ],
+        },
+        {
+          onBlockConfirmation: txnReceipt => {
+            console.log("📦 Transaction blockHash", txnReceipt.blockHash);
+          },
+        },
+      );
+    } catch (e) {
+      console.error("Error setting greeting", e);
+    }
+  };
+  const handleSubmitSquad = async () => {
+    try {
+      const merkleRoot = computeMerkleRoot(
+        padArrayWithZeros(
+          data[1].components.map(player => {
+            return player.player_id;
+          }),
+        ),
+      );
+      const timeconst = keccak256(`0x${Date.now().toString(16)}`);
+      localStorage.setItem("timestamp_" + params.id, timeconst);
+      const finalHash = keccak256(
+        encodePacked(["bytes20", "bytes32", "bytes32"], [connectedAddress, merkleRoot, timeconst]),
+      );
+
+      await writeContractAsync(
+        {
+          functionName: "submitSquad",
+          args: [params.id, params.id + connectedAddress, BigInt(score), finalHash],
+          value: parseEther(ethAmount),
+        },
+        {
+          onBlockConfirmation: txnReceipt => {
+            console.log("📦 Transaction submit squad blockHash", txnReceipt.blockHash);
+          },
+        },
+      );
+    } catch (e) {
+      console.error("Error setting greeting", e);
+    }
+  };
+  const submitSquad = async () => {
+    await handleSubmitSquad();
+    console.log("squad submitted 2");
+    setStep(4);
+  };
+
+  const { data: s_lastRequestId } = useScaffoldReadContract({
+    contractName: "Betting",
+    functionName: "s_lastRequestId",
+  });
+  const { data: score } = useScaffoldReadContract({
+    contractName: "Betting",
+    functionName: "score",
+  });
+
+  const betTeam = async () => {
+    await handleSendRequest();
+    console.log("req sent");
+    const provider = new ethers.WebSocketProvider(
+      `wss://arb-sepolia.g.alchemy.com/v2/${process.env.NEXT_PUBLIC_ALCHEMY_API_KEY}`,
+    );
+    const contract = new ethers.Contract(BETTING_CONTRACT.address, BETTING_CONTRACT.abi, provider);
+    contract.on("RequestFulfilled", () => {
+      submitSquad();
+    });
+    // await test();
+  };
+
+
   const onDragEnd = (result: DropResult) => {
     const { source, destination } = result;
     if (!destination) return;
@@ -248,7 +386,7 @@ const Home = ({ params }: { params: { id: string } }) => {
                     className="btn bg-accent"
                     onClick={() => {
                       setStep(3);
-                      console.log(data)
+                      console.log(data);
                     }}
                   >
                     Lock Team
@@ -328,15 +466,17 @@ const Home = ({ params }: { params: { id: string } }) => {
                     </>
                   )}
                 </Droppable>
+                <EtherInput value={ethAmount} onChange={amount => setEthAmount(amount)} />;
                 <button
-                    className="btn bg-accent"
-                    onClick={() => {
-                      setStep(3);
-                    }}
-                  >
-                    Bet
-                    <ArrowRightIcon className="h-4 w-4" />
-                  </button>
+                  className="btn bg-accent"
+                  onClick={() => {
+                    setStep(3);
+                    betTeam();
+                  }}
+                >
+                  Bet
+                  <ArrowRightIcon className="h-4 w-4" />
+                </button>
               </>
             ) : (
               <></>

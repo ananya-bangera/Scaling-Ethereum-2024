@@ -4,10 +4,17 @@ import { useEffect, useState } from "react";
 import Image from "next/image";
 import BETTING_CONTRACT from "../../../../hardhat/deployments/arbitrumSepolia/Betting.json";
 import { DndContext } from "./DndContext";
+<<<<<<< HEAD
 import { EvmChains, SignProtocolClient, SpMode } from "@ethsign/sp-sdk";
 import { Alchemy, Network, Utils } from "alchemy-sdk";
 import * as dotenv from "dotenv";
 import { BigNumber, ethers } from "ethers";
+=======
+import lighthouse from "@lighthouse-web3/sdk";
+import { ethers } from "ethers";
+import { Alchemy, Network, Utils } from "alchemy-sdk";
+import * as dotenv from "dotenv";
+>>>>>>> 0fc04d8b496f490c3f247e594bf98110441dcd05
 import { read } from "fs";
 import { Draggable, DropResult, Droppable } from "react-beautiful-dnd";
 import { parseEther } from "viem";
@@ -390,6 +397,76 @@ const Home = ({ params }: { params: { id: string } }) => {
       console.log(newData);
     }
   };
+
+  const encryptionSignature = async () => {
+    let provider = null;
+    if (!window.ethereum) {
+      provider = ethers.getDefaultProvider();
+    } else {
+      provider = new ethers.BrowserProvider(window.ethereum);
+    }
+    const signer = await provider.getSigner();
+    const address = await signer.getAddress();
+    const messageRequested = (await lighthouse.getAuthMessage(address)).data.message;
+    const signedMessage = await signer.signMessage(messageRequested);
+    return {
+      signedMessage: signedMessage,
+      publicKey: address,
+    };
+  };
+  // https://gateway.lighthouse.storage/ipfs/QmWGaWkHTtmSk6PA1c3qnEytPevhVqPQTM17zXSgVRaC1A
+  const IPFSFunction = async () => {
+    console.log("Upload JSON to IPFS and return CID.");
+    console.log(data);
+    const json_data = data[1];
+    console.log(json_data);
+    const { publicKey, signedMessage } = await encryptionSignature();
+    const output = await lighthouse.textUploadEncrypted(
+      JSON.stringify(json_data),
+      "fa7b0ca2.09bf273150fb4ce987f3401b7f99d5a9",//Place this in.env @ANI BANG
+      publicKey,
+      signedMessage,
+    );
+    console.log("Visit at https://gateway.lighthouse.storage/ipfs/" + output.data.Hash);
+    localStorage.setItem(`Match-${params.id}`, output.data.Hash);
+    decrypt();
+  };
+  const decrypt = async () => {
+    // Fetch file encryption key
+    // https://gateway.lighthouse.storage/ipfs/QmZA6rRymwTMAmPJe4zJ2DGU8cQLKcineTomtr37o4aFRL
+    const cid = localStorage.getItem(`Match-${params.id}`); //replace with your IPFS CID
+    console.log(cid);
+    const { publicKey, signedMessage } = await encryptionSignature();
+    /*
+      fetchEncryptionKey(cid, publicKey, signedMessage)
+        Parameters:
+          CID: CID of the file to decrypt
+          publicKey: public key of the user who has access to file or owner
+          signedMessage: message signed by the owner of publicKey
+    */
+    const keyObject = await lighthouse.fetchEncryptionKey(cid, publicKey, signedMessage);
+
+    // Decrypt file
+    /*
+      decryptFile(cid, key, mimeType)
+        Parameters:
+          CID: CID of the file to decrypt
+          key: the key to decrypt the file
+          mimeType: default null, mime type of file
+    */
+
+    const fileType = "plain/text";
+    const decrypted = await lighthouse.decryptFile(cid, keyObject.data.key, fileType);
+    const reader = new FileReader();
+    reader.onload = function (event) {
+      // The result attribute contains the data as a data URL
+      const data = event.target.result;
+
+      // Display the extracted data
+      console.log(JSON.parse(data));
+    };
+    reader.readAsText(decrypted);
+  };
   useEffect(() => {
     const temp = match_players[parseInt(params.id) - 1];
 
@@ -403,6 +480,7 @@ const Home = ({ params }: { params: { id: string } }) => {
       { id: 2, title: "Bowlers", components: temp.bowlers },
     ];
     setData(tempData);
+    decrypt();
   }, []);
 
   return (
@@ -592,6 +670,10 @@ const Home = ({ params }: { params: { id: string } }) => {
                     onClick={() => {
                       setStep(3);
                       console.log(data);
+<<<<<<< HEAD
+                      IPFSFunction();
+=======
+>>>>>>> b45ba9e6f18042834b5be66261c88111b03fd618
                     }}
                   >
                     Lock Team
@@ -676,7 +758,10 @@ const Home = ({ params }: { params: { id: string } }) => {
                   className="btn bg-accent"
                   onClick={() => {
                     setStep(3);
+<<<<<<< HEAD
+=======
                     betTeam();
+>>>>>>> b45ba9e6f18042834b5be66261c88111b03fd618
                   }}
                 >
                   Bet

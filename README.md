@@ -67,6 +67,9 @@ ZKnockXI is a decentralized application that enables users to create and bet on 
 - [Chainlink Functions Subscription on Arbitrum Sepolia](https://functions.chain.link/arbitrum-sepolia/55)
 - [Score Calculation Oracle Server](https://puce-smoggy-clam.cyclic.app)
 
+### Sign Protocol Attestations and Schema
+- [Sign Protocol Schema](https://testnet-scan.sign.global/schema/onchain_evm_421614_0x30)
+
 ## 🤖Tech-Stack
 
 - NextJS + Hardhat from Scaffold-Eth-2 Template for Project Setup

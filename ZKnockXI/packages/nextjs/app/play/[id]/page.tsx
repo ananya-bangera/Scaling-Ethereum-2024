@@ -173,7 +173,7 @@ const Home = ({ params }: { params: { id: string } }) => {
               leafHash: finalHash,
             },
 
-            { headers: { Authorization: "Bearer zknockx_17_apr_2024_6L559IN6SpRTCKhw9I9USP1L9ov0GyeNbAJO" } },
+            { headers: { Authorization: `Bearer ${process.env.NEXT_PUBLIC_WITNESSAPI_KEY}` } },
           )
           .then(async function (response) {
             // handle success

@@ -1,11 +1,11 @@
 <h1 align="center">
   <a href="https://github.com/ananya-bangera/Scaling-Ethereum-2024">
-    <img src="" alt="ZKnockXI Logo" width="125" height="125">
+    <img src="https://github.com/ananya-bangera/Scaling-Ethereum-2024/assets/24823649/c41614e8-dc1a-45a7-89c5-9ef52888f955" alt="ZKnockXI Logo" width="125" height="125">
   </a>
   <br>
   ZKnockXI 
 </h1>
- 
+
 <div align="center">
    <strong>ZKnockXI</strong> - A Privacy-Focused, Sybil-Resistant, Decentralized Fantasy Cricket Platform.🏏 <br>  
 </div>
@@ -49,28 +49,29 @@ ZKnockXI is a decentralized application that enables users to create and bet on 
     </td>
   </tr>
   </table>
+
+![Select A Match](https://github.com/ananya-bangera/Scaling-Ethereum-2024/assets/24823649/96ee41b2-7f05-496b-8dfa-594d09c3499f)
+
   
 ## 🔗Links
-
-### Frontend (Vercel)
-- [**ZKnockXI**]() 🚀
 
 ### Assets
 - [GitHub Repo](https://github.com/ananya-bangera/Scaling-Ethereum-2024)
 - [EthGlobal Submission]()
-- [Demo Video]()
+- [Demo Video](https://youtu.be/02FEYevnfGE)
 
 ### Deployed Protocol Contract
-- [Arbitrum Sepolia Testnet]()
+- [Arbitrum Sepolia Testnet](https://sepolia.arbiscan.io/address/0x51254Af0A3984161D937dbCa3460AA4837254299)
 
 ### Oracle Server
+- [Chainlink Functions Subscription on Arbitrum Sepolia](https://functions.chain.link/arbitrum-sepolia/55)
 - [Score Calculation Oracle Server](https://puce-smoggy-clam.cyclic.app)
 
 ## 🤖Tech-Stack
 
 - NextJS + Hardhat from Scaffold-Eth-2 Template for Project Setup
 - Solidity for Smart Contracts
-- Chainlink Any API for Oracle Score Calculation Integration with Smart Contract
+- Chainlink Functions for Oracle Score Calculation Integration with Smart Contract
 
 ## 🛠Project Setup
 

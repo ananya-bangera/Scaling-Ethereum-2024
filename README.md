@@ -57,7 +57,7 @@ ZKnockXI is a decentralized application that enables users to create and bet on 
 
 ### Assets
 - [GitHub Repo](https://github.com/ananya-bangera/Scaling-Ethereum-2024)
-- [EthGlobal Submission]()
+- [EthGlobal Submission](https://ethglobal.com/showcase/zknockxi-jydjm)
 - [Demo Video](https://youtu.be/02FEYevnfGE)
 
 ### Deployed Protocol Contract

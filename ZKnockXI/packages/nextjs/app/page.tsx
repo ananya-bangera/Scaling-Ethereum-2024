@@ -4,30 +4,21 @@ import Image from "next/image";
 import Link from "next/link";
 import type { NextPage } from "next";
 
-
 const Home: NextPage = () => {
   return (
     <>
       {/* Hero section with header */}
       <div className="relative h-[70vh] md:min-h-screen flex flex-col">
         <div className="absolute h-1/4 w-full top-0 left-0 hero-top-gradient"></div>
-        <div className="bg-[#EFFBCA] bg-cover md:bg-center bg-[position:40%_0] flex-grow" style={{backgroundImage:"url(/assets/landingsports.png)",}}>
+        <div
+          className="bg-[#EFFBCA] bg-cover md:bg-center bg-[position:40%_0] flex-grow"
+          style={{ backgroundImage: "url(/assets/landing5.jpg)" }}
+        >
           <div className="flex justify-center">
-            <h1 className="text-center z-10 font-bold font-mono text-4xl max-w-xs lg:text-3xl lg:mt-8 lg:max-w-4xl px-3 text-black">
-              A Privacy-Focused, Sybil-Resistant, Decentralized Fantasy Cricket Platform 
+            <h1 className="text-center z-10 font-bold font-mono text-4xl max-w-xs lg:text-3xl lg:mt-8 lg:max-w-4xl px-3 text-white">
+              A Privacy-Focused, Sybil-Resistant, Decentralized Fantasy Cricket Platform
             </h1>
           </div>
-        </div>
-        <div className="absolute h-1/4 w-full bottom-0 left-0 hero-bottom-gradient flex items-end justify-center">
-          <Link href="#start-using-fairplayxi" className="hidden lg:block">
-            <Image
-              src="/assets/down-arrow.svg"
-              alt="diamon icon"
-              width={25}
-              height={25}
-              className="mb-3 cursor-pointer animate-bounce-interval"
-            />
-          </Link>
         </div>
       </div>
 

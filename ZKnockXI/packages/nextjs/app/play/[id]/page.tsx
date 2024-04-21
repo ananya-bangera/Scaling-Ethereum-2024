@@ -5,12 +5,10 @@ import Image from "next/image";
 import BETTING_CONTRACT from "../../../../hardhat/deployments/arbitrumSepolia/Betting.json";
 import { DndContext } from "./DndContext";
 import { EvmChains, SignProtocolClient, SpMode } from "@ethsign/sp-sdk";
-
-import { BigNumber, ethers } from "ethers";
 import lighthouse from "@lighthouse-web3/sdk";
-
 import { Alchemy, Network, Utils } from "alchemy-sdk";
 import * as dotenv from "dotenv";
+import { BigNumber, ethers } from "ethers";
 import { read } from "fs";
 import { Draggable, DropResult, Droppable } from "react-beautiful-dnd";
 import { parseEther } from "viem";
@@ -46,6 +44,7 @@ interface MatchPlayers {
 const Home = ({ params }: { params: { id: string } }) => {
   const [step, setStep] = useState(2);
   const [players, setPlayers] = useState([]);
+  const [player_scores, setPlayersScores] = useState([]);
   const [data, setData] = useState<MatchPlayers[] | []>([]);
   const [ethAmount, setEthAmount] = useState("0");
   const [logLevel, setLogLevel] = useState(1);
@@ -152,53 +151,66 @@ const Home = ({ params }: { params: { id: string } }) => {
           }),
         ),
       );
-      const timeconst = keccak256(`0x${Date.now().toString(16)}`);
-      localStorage.setItem("timestamp_" + params.id, timeconst);
-      const finalHash = keccak256(
-        encodePacked(["bytes20", "bytes32", "bytes32"], [connectedAddress, merkleRoot, timeconst]),
-      );
+      //retrieve
+      let reader = await decrypt();
+      reader.onload = async function () {
+        // The result attribute contains the data as a data URL
+
+        // Display the extracted data
+        let timeconst = JSON.parse(reader.result.toString()).timeconst;
+        console.log(timeconst);
+        // return reader.result;
+        // return JSON.parse(data);
+
+        const finalHash = keccak256(
+          encodePacked(["bytes20", "bytes32", "bytes32"], [connectedAddress, merkleRoot, timeconst]),
+        );
+
+        await axios
+          .post(
+            "https://api.witness.co/postLeafHash",
+            {
+              leafHash: finalHash,
+            },
+
+            { headers: { Authorization: "Bearer zknockx_17_apr_2024_6L559IN6SpRTCKhw9I9USP1L9ov0GyeNbAJO" } },
+          )
+          .then(async function (response) {
+            // handle success
+            console.log("success");
+            console.log(response.data.leafIndex);
+            await createNotaryAttestation(response.data.leafIndex.toString());
+          })
+          .catch(function (error) {
+            // handle error
+            console.log(error);
+          });
+        const provider = new ethers.JsonRpcProvider(
+          "https://arb-sepolia.g.alchemy.com/v2/kP1dnGyS5Y5e0lbD2jNkd_qjXGUodbZ3",
+        );
+        const contract = new ethers.Contract(BETTING_CONTRACT.address, BETTING_CONTRACT.abi, provider);
+        let score = await contract.score();
+
+        console.log(score);
+
+        await writeContractAsync(
+          {
+            functionName: "submitSquad",
+            args: [params.id, params.id + connectedAddress, BigInt(score), finalHash],
+            value: parseEther(ethAmount),
+          },
+          {
+            onBlockConfirmation: txnReceipt => {
+              console.log("📦 Transaction submit squad blockHash", txnReceipt.blockHash);
+            },
+          },
+        );
+        console.log("squad submitted 2");
+        setPlayers(data[1]);
+        setStep(4);
+      };
 
       //API
-
-      await axios
-        .post(
-          "https://api.witness.co/postLeafHash",
-          {
-            leafHash: finalHash,
-          },
-
-          { headers: { Authorization: "Bearer zknockx_17_apr_2024_6L559IN6SpRTCKhw9I9USP1L9ov0GyeNbAJO" } },
-        )
-        .then(async function (response) {
-          // handle success
-          console.log("success");
-          console.log(response.data.leafIndex);
-          await createNotaryAttestation(response.data.leafIndex.toString());
-        })
-        .catch(function (error) {
-          // handle error
-          console.log(error);
-        });
-      const provider = new ethers.JsonRpcProvider(
-        "https://arb-sepolia.g.alchemy.com/v2/kP1dnGyS5Y5e0lbD2jNkd_qjXGUodbZ3",
-      );
-      const contract = new ethers.Contract(BETTING_CONTRACT.address, BETTING_CONTRACT.abi, provider);
-      let score = await contract.score();
-
-      console.log(score);
-
-      await writeContractAsync(
-        {
-          functionName: "submitSquad",
-          args: [params.id, params.id + connectedAddress, BigInt(score), finalHash],
-          value: parseEther(ethAmount),
-        },
-        {
-          onBlockConfirmation: txnReceipt => {
-            console.log("📦 Transaction submit squad blockHash", txnReceipt.blockHash);
-          },
-        },
-      );
     } catch (e) {
       console.error("Error setting greeting", e);
     }
@@ -220,9 +232,6 @@ const Home = ({ params }: { params: { id: string } }) => {
 
   const submitSquad = async () => {
     await handleSubmitSquad();
-    console.log("squad submitted 2");
-    setPlayers(data[1]);
-    setStep(4);
   };
 
   const claimReward = async () => {
@@ -235,15 +244,23 @@ const Home = ({ params }: { params: { id: string } }) => {
     );
     // console.log(merkleRoot);
     // console.log(address);
-    const timeconst = localStorage.getItem("timestamp_" + params.id);
-    const finalHash = keccak256(
-      encodePacked(["bytes20", "bytes32", "bytes32"], [connectedAddress, merkleRoot, timeconst]),
-    );
-    // console.log(timeconst);
-    // console.log(finalHash);
+    //retrieve
+    let reader = await decrypt();
+    reader.onload = async function () {
+      // The result attribute contains the data as a data URL
 
-    await handleClaimReward(finalHash);
-    setIsWinner(false);
+      // Display the extracted data
+      let timeconst = JSON.parse(reader.result.toString()).timeconst;
+      console.log(timeconst);
+      const finalHash = keccak256(
+        encodePacked(["bytes20", "bytes32", "bytes32"], [connectedAddress, merkleRoot, timeconst]),
+      );
+      // console.log(timeconst);
+      // console.log(finalHash);
+
+      await handleClaimReward(finalHash);
+      setIsWinner(false);
+    };
   };
 
   async function makeAttestationRequest(endpoint: string, options: any) {
@@ -263,7 +280,7 @@ const Home = ({ params }: { params: { id: string } }) => {
     // return original response
     return res.data;
   }
-  const queryAttestations = async(leafIndex) => {
+  const queryAttestations = async leafIndex => {
     const response = await makeAttestationRequest(
       "index/attestations",
       {
@@ -294,7 +311,7 @@ const Home = ({ params }: { params: { id: string } }) => {
       success: true,
       attestations: response.data.rows,
     };
-  }
+  };
 
   const betTeam = async () => {
     await handleSendRequest();
@@ -317,60 +334,70 @@ const Home = ({ params }: { params: { id: string } }) => {
       ),
     );
     setLogLevel(3);
-    const timestamp = localStorage.getItem("timestamp_" + params.id);
-    const finalHash = keccak256(
-      encodePacked(["bytes20", "bytes32", "bytes32"], [connectedAddress, merkleRoot, timestamp]),
-    );
-    //verify witness
-    let attestations;
 
-    await axios
-      .get("https://api.witness.co/getLeafIndexByHash", {
-        params: {
-          leafHash: finalHash,
-        },
-      })
-      .then(async function (response) {
-        console.log(response.data.leafIndex);
-        attestations = await queryAttestations(response.data.leafIndex);
-      })
-      .catch(function (error) {
-        console.log(error);
-      });
-    console.log("attestations ananya");
-    console.log(attestations.attestations.length == 1);
+    let reader = await decrypt();
+    reader.onload = async function () {
+      // The result attribute contains the data as a data URL
 
-    setLogLevel(5);
-    const data = await axios(
-      `https://puce-smoggy-clam.cyclic.app/scores/${params.id}/${players.components
-        .map(player => {
-          return player.player_id.toString();
+      // Display the extracted data
+      let timeconst = JSON.parse(reader.result.toString()).timeconst;
+      console.log(timeconst);
+
+      const finalHash = keccak256(
+        encodePacked(["bytes20", "bytes32", "bytes32"], [connectedAddress, merkleRoot, timeconst]),
+      );
+      //verify witness
+      let attestations;
+
+      await axios
+        .get("https://api.witness.co/getLeafIndexByHash", {
+          params: {
+            leafHash: finalHash,
+          },
         })
-        .join("P")}`,
-    );
-    console.log(data.data);
-    // const res = await data.json();
-    // console.log(res);
-    setLogsAll([...logsAll, `Your Total Score Is ${data.data.total_score}`]);
-    setLogLevel(9);
-    const provider = new ethers.JsonRpcProvider(
-      "https://arb-sepolia.g.alchemy.com/v2/kP1dnGyS5Y5e0lbD2jNkd_qjXGUodbZ3",
-    );
-    const contract = new ethers.Contract(BETTING_CONTRACT.address, BETTING_CONTRACT.abi, provider);
-    let winnerData = await contract.matchWinnerData(params.id);
-    console.log("winnerdata");
-    console.log(winnerData);
+        .then(async function (response) {
+          console.log(response.data.leafIndex);
+          attestations = await queryAttestations(response.data.leafIndex);
+        })
+        .catch(function (error) {
+          console.log(error);
+        });
+      console.log("attestations ananya");
+      console.log(attestations.attestations.length == 1);
 
-    console.log(winnerData[1]);
-    console.log(connectedAddress);
-    if (winnerData[1].toString() === connectedAddress?.toString()) {
-      setLogsAll([...logsAll, "You've Won, Please Claim Your Rewards 💸"]);
-      setLogLevel(10);
-      setIsWinner(true);
-    } else {
-      setLogsAll([...logsAll, "You've Unfortunately Lost, Better Luck Next Time 😥"]);
-      setLogLevel(10);
-    }
+      setLogLevel(5);
+      const data = await axios(
+        `https://puce-smoggy-clam.cyclic.app/scores/${params.id}/${players.components
+          .map(player => {
+            return player.player_id.toString();
+          })
+          .join("P")}`,
+      );
+      console.log(data.data);
+      // const res = await data.json();
+      // console.log(res);
+      setPlayersScores(data.data.player_scores);
+      setLogsAll([...logsAll, `Your Total Score Is ${data.data.total_score}`]);
+      setLogLevel(9);
+      const provider = new ethers.JsonRpcProvider(
+        "https://arb-sepolia.g.alchemy.com/v2/kP1dnGyS5Y5e0lbD2jNkd_qjXGUodbZ3",
+      );
+      const contract = new ethers.Contract(BETTING_CONTRACT.address, BETTING_CONTRACT.abi, provider);
+      let winnerData = await contract.matchWinnerData(params.id);
+      console.log("winnerdata");
+      console.log(winnerData);
+
+      console.log(winnerData[1]);
+      console.log(connectedAddress);
+      if (winnerData[1].toString() === connectedAddress?.toString()) {
+        setLogsAll([...logsAll, "You've Won, Please Claim Your Rewards 💸"]);
+        setLogLevel(10);
+        setIsWinner(true);
+      } else {
+        setLogsAll([...logsAll, "You've Unfortunately Lost, Better Luck Next Time 😥"]);
+        setLogLevel(10);
+      }
+    };
   };
 
   const onDragEnd = (result: DropResult) => {
@@ -414,18 +441,18 @@ const Home = ({ params }: { params: { id: string } }) => {
   const IPFSFunction = async () => {
     console.log("Upload JSON to IPFS and return CID.");
     console.log(data);
-    const json_data = data[1];
+    const timeconst = keccak256(`0x${Date.now().toString(16)}`);
+    const json_data = { data: data[1], timeconst: timeconst };
     console.log(json_data);
     const { publicKey, signedMessage } = await encryptionSignature();
     const output = await lighthouse.textUploadEncrypted(
       JSON.stringify(json_data),
-      "fa7b0ca2.09bf273150fb4ce987f3401b7f99d5a9",//Place this in.env @ANI BANG
+      process.env.NEXT_PUBLIC_FILECOIN_KEY, //Place this in.env @ANI BANG
       publicKey,
       signedMessage,
     );
     console.log("Visit at https://gateway.lighthouse.storage/ipfs/" + output.data.Hash);
     localStorage.setItem(`Match-${params.id}`, output.data.Hash);
-    decrypt();
   };
   const decrypt = async () => {
     // Fetch file encryption key
@@ -453,15 +480,13 @@ const Home = ({ params }: { params: { id: string } }) => {
 
     const fileType = "plain/text";
     const decrypted = await lighthouse.decryptFile(cid, keyObject.data.key, fileType);
+    console.log(decrypted);
+    console.log(typeof decrypted);
     const reader = new FileReader();
-    reader.onload = function (event) {
-      // The result attribute contains the data as a data URL
-      const data = event.target.result;
-
-      // Display the extracted data
-      console.log(JSON.parse(data));
-    };
     reader.readAsText(decrypted);
+    return reader;
+    // console.log( "hello : "+reader.result?.toString());
+    // return reader.result;
   };
   useEffect(() => {
     const temp = match_players[parseInt(params.id) - 1];
@@ -476,7 +501,7 @@ const Home = ({ params }: { params: { id: string } }) => {
       { id: 2, title: "Bowlers", components: temp.bowlers },
     ];
     setData(tempData);
-    decrypt();
+    // decrypt();
   }, []);
 
   return (
@@ -666,10 +691,7 @@ const Home = ({ params }: { params: { id: string } }) => {
                     onClick={() => {
                       setStep(3);
                       console.log(data);
-<<<<<<< HEAD
                       IPFSFunction();
-=======
->>>>>>> b45ba9e6f18042834b5be66261c88111b03fd618
                     }}
                   >
                     Lock Team
@@ -716,13 +738,6 @@ const Home = ({ params }: { params: { id: string } }) => {
                           >
                             {provided => (
                               <>
-                                {/* <div >
-                            <div className="flex bg-green-200 m-2 flex-col items-center justify-center w-24">
-                              
-                              <p className="font-semibold">{component.player_name}</p>
-                            </div>
-                          </div> */}
-
                                 <div
                                   {...provided.dragHandleProps}
                                   {...provided.draggableProps}
@@ -749,20 +764,19 @@ const Home = ({ params }: { params: { id: string } }) => {
                     </>
                   )}
                 </Droppable>
-                <EtherInput value={ethAmount} onChange={amount => setEthAmount(amount)} />;
-                <button
-                  className="btn bg-accent"
-                  onClick={() => {
-                    setStep(3);
-<<<<<<< HEAD
-=======
-                    betTeam();
->>>>>>> b45ba9e6f18042834b5be66261c88111b03fd618
-                  }}
-                >
-                  Bet
-                  <ArrowRightIcon className="h-4 w-4" />
-                </button>
+                <div className="place-self-center text-center items-center text-lg w-52">
+                  <EtherInput value={ethAmount} onChange={amount => setEthAmount(amount)} />
+                  <button
+                    className="btn bg-accent mt-4"
+                    onClick={() => {
+                      setStep(3);
+                      betTeam();
+                    }}
+                  >
+                    Bet
+                    <ArrowRightIcon className="h-4 w-4" />
+                  </button>
+                </div>
               </>
             ) : (
               <></>
@@ -822,7 +836,81 @@ const Home = ({ params }: { params: { id: string } }) => {
               </div>
             </div>
           </div>
-          <div>{/*  */}</div>
+          {/* <div
+                        className="p-2 w-full flex items-center justify-center flex-wrap bg-base-100  border-gray-400 border border-dashed min-h-96"
+                        style={{
+                          backgroundImage: "url(/assets/pitch.jpg)",
+                          backgroundSize: "cover",
+                          backgroundRepeat: "no-repeat",
+                          backgroundPosition: "center center",
+                        }}
+                  
+                      > */}
+          <div className="grid grid-cols-3">
+            {players.components == null ? (
+              <></>
+            ) : (
+              players.components.map((player, index) => {
+                return (
+                  <div className="flex flex-row ml-16">
+                    <div className=" bg-primary rounded-xl text-center ">
+                      <Image
+                        alt="Player Image"
+                        src={`/assets/players/${player.value}.jpg`}
+                        height={95}
+                        width={95}
+                        className="rounded-t-xl w-full min-h-32 max-h-32 min-w-24 max-w-24"
+                      />
+                      {/* <div className="p-0.5"> */}
+                      <p className="font-normal">{player.player_name}</p>
+                      {/* </div> */}
+                      <div className="badge badge-secondary mb-1">{player_scores[index]}</div>
+                    </div>
+                    {/* <div className="chat  chat-start">
+                <div className="chat-bubble bg-primary">56</div>
+              </div> */}
+                  </div>
+                );
+              })
+            )}
+
+            {/*
+            <div className="flex flex-row ml-16">
+              <div className=" bg-primary rounded-xl text-center ">
+                <Image
+                  alt="Player Image"
+                  src={`/assets/players/Virat Kohli.jpg`}
+                  height={95}
+                  width={95}
+                  className="rounded-t-xl w-full min-h-32 max-h-32 min-w-24 max-w-24"
+                />
+                <div className="p-1">
+                  <p className="font-normal">Virat Kohli</p>
+                </div>
+              </div>
+              <div className="chat chat-start">
+                <div className="chat-bubble">56</div>
+              </div>
+            </div>
+            <div className="flex flex-row ml-16 mt-8">
+              <div className=" bg-primary rounded-xl text-center ">
+                <Image
+                  alt="Player Image"
+                  src={`/assets/players/Virat Kohli.jpg`}
+                  height={95}
+                  width={95}
+                  className="rounded-t-xl w-full min-h-32 max-h-32 min-w-24 max-w-24"
+                />
+                <div className="p-1">
+                  <p className="font-normal">Virat Kohli</p>
+                </div>
+              </div>
+              <div className="chat chat-start">
+                <div className="chat-bubble">56</div>
+              </div>
+            </div> */}
+          </div>
+          {/* </div> */}
         </div>
       )}
     </DndContext>
